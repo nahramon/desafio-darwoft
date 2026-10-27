@@ -6,7 +6,7 @@
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `parte1/` | `q1.sql` a `q5.sql` (MySQL 9, probadas en DB Fiddle)                                                                                     |
 | `parte2/` | Proyecto dbt: `models/staging`, `models/marts`, `schema.yml`, `respuesta_2d.md`                                                          |
-| `parte3/` | `analisis_parte3.html`: notebook exportado con los hallazgos, las queries y los supuestos; `tablero_parte3.pdf`: tablero de Power BI |
+| `parte3/` | `analisis_parte3.html`: notebook exportado con los hallazgos, las queries y los supuestos; `tablero_parte3.pdf`: tablero de Power BI; acceder a la visualización del notebook: https://nahramon.github.io/desafio-darwoft/parte3/analisis_parte3.html |
 
 ## Decisiones y supuestos principales
 
