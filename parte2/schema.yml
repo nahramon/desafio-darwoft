@@ -1,0 +1,102 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Tablas crudas cargadas desde el sistema transaccional.
+    tables:
+      - name: users
+        columns:
+          - name: user_id
+            data_tests: [unique, not_null]
+      - name: accounts
+        columns:
+          - name: account_id
+            data_tests: [unique, not_null]
+      - name: transactions
+        columns:
+          - name: transaction_id
+            data_tests: [unique, not_null]
+
+models:
+  - name: stg_transactions
+    description: >
+      Transacciones con tipos correctos, sin las fallidas (status = 'failed').
+      Conserva las pendientes. Una fila por transaction_id.
+    columns:
+      - name: transaction_id
+        description: Identificador único de la transacción.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: account_id
+        description: Cuenta a la que pertenece la transacción.
+        data_tests:
+          - not_null
+          # Integridad referencial: una transacción sin cuenta no se puede atribuir
+          # a ningún usuario y desaparecería del mart en el inner join.
+          - relationships:
+              to: ref('stg_accounts')
+              field: account_id
+
+      - name: amount
+        description: Monto con signo (créditos positivos, débitos negativos).
+        data_tests:
+          - not_null
+
+      - name: currency
+        description: Moneda de la transacción (ARS o USD).
+        data_tests:
+          # Test genérico adicional: accepted_values sobre currency.
+          # Justificación: el mart agrupa por moneda y nunca suma monedas distintas.
+          # Si el origen empezara a emitir una moneda nueva (EUR, BRL...), se agruparía
+          # en silencio como una columna más sin tipo de cambio ni revisión. Este test
+          # hace fallar el build y obliga a decidir cómo tratarla antes de publicar.
+          - accepted_values:
+              values: ['ARS', 'USD']
+
+      - name: status
+        description: Estado de la transacción. 'failed' queda excluido en staging.
+        data_tests:
+          # Contrato de staging: solo deben llegar completed y pending.
+          # Detecta estados nuevos y verifica que el filtro de failed funcione.
+          - accepted_values:
+              values: ['completed', 'pending']
+
+      - name: created_at
+        data_tests:
+          - not_null
+
+  - name: stg_accounts
+    description: Cuentas con su usuario titular. Una fila por account_id.
+    columns:
+      - name: account_id
+        data_tests:
+          - unique
+          - not_null
+      - name: user_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: source('raw', 'users')
+              field: user_id
+
+  - name: mart_user_activity
+    description: >
+      Actividad mensual por usuario y moneda, solo transacciones completadas.
+      Grano: user_id x activity_month x currency.
+    columns:
+      - name: user_month_currency_key
+        description: Clave compuesta (usuario | mes | moneda) que identifica la fila.
+        data_tests:
+          - unique
+          - not_null
+      - name: user_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: source('raw', 'users')
+              field: user_id
+      - name: completed_transactions
+        data_tests:
+          - not_null
